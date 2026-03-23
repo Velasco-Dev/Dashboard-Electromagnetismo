@@ -28,7 +28,7 @@ function App() {
     <div className="dashboard-container">
       <header className="header">
         <div>
-          <h1>Panel Fotovoltaico IoT</h1>
+          <h1>Dashboard Sistema Fotovoltaico IoT</h1>
           <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>Monitor en tiempo real ESP32 + INA219</p>
         </div>
         
