@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Archivos sensibles ESP32
+ESP32/.env.py
+
+# Archivos sensibles Backend
+backend/.env
+backend/node_modules/

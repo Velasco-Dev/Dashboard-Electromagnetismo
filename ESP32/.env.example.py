@@ -1,0 +1,8 @@
+
+
+WIFI_SSID = 'TU_RED_WIFI'
+WIFI_PASSWORD = 'TU_PASSWORD'
+
+MQTT_BROKER = 'broker.hivemq.com'
+MQTT_PORT = 1883
+MQTT_CLIENT_ID = 'esp32_solar_001'
