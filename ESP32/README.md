@@ -352,3 +352,15 @@ mosquitto_sub -h broker.hivemq.com -t solar/data
 **¡Sistema listo para producción académica y demostraciones!** 🎓⚡
 
 El sistema está diseñado para ser robusto, con fallbacks automáticos y reconexión, perfecto para proyectos educativos y prototipos de sistemas fotovoltaicos IoT.
+
+
+
+
+
+
+import control
+control.init()
+control.system.start_loop()
+
+
+control.system.stop() parar
