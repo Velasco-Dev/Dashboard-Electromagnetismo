@@ -3,7 +3,7 @@
 
 const { getDB } = require('../config/db');
 
-const COLLECTION = 'measurements';
+const COLLECTION = 'info';
 
 class Measurement {
   static async create(data) {
@@ -11,9 +11,17 @@ class Measurement {
     const collection = db.collection(COLLECTION);
     
     const document = {
-      ...data,
-      _receivedAt: new Date(),
-      _createdAt: new Date()
+      voltaje_panel: data.panel_voltage || 0,
+      corriente_panel: data.panel_current || 0,
+      voltaje_bateria: data.battery_voltage || 0,
+      corriente_bateria: data.battery_current || 0,
+      corriente_carga: data.load_current || 0,
+      potencia: data.power || 0,
+      estado_sensores: data.sensors_status || {},
+      id_medicion: data.measurement_id || 0,
+      marca_tiempo: data.timestamp || Math.floor(Date.now() / 1000),
+      recibido_en: new Date(),
+      creado_en: new Date()
     };
     
     const result = await collection.insertOne(document);
@@ -26,7 +34,7 @@ class Measurement {
     
     return await collection
       .find()
-      .sort({ _receivedAt: -1 })
+      .sort({ recibido_en: -1 })
       .limit(limit)
       .toArray();
   }
@@ -46,8 +54,8 @@ class Measurement {
     const since = new Date(Date.now() - minutes * 60 * 1000);
     
     return await collection
-      .find({ _receivedAt: { $gte: since } })
-      .sort({ _receivedAt: -1 })
+      .find({ recibido_en: { $gte: since } })
+      .sort({ recibido_en: -1 })
       .toArray();
   }
 
@@ -59,13 +67,13 @@ class Measurement {
       {
         $group: {
           _id: null,
-          count: { $sum: 1 },
-          avgVoltagePanel: { $avg: '$panel_voltage' },
-          avgCurrentPanel: { $avg: '$panel_current' },
-          avgVoltageBattery: { $avg: '$battery_voltage' },
-          avgPower: { $avg: '$power' },
-          maxPower: { $max: '$power' },
-          minPower: { $min: '$power' }
+          total: { $sum: 1 },
+          voltaje_panel_promedio: { $avg: '$voltaje_panel' },
+          corriente_panel_promedio: { $avg: '$corriente_panel' },
+          voltaje_bateria_promedio: { $avg: '$voltaje_bateria' },
+          potencia_promedio: { $avg: '$potencia' },
+          potencia_maxima: { $max: '$potencia' },
+          potencia_minima: { $min: '$potencia' }
         }
       }
     ]).toArray();
@@ -76,7 +84,7 @@ class Measurement {
     const collection = db.collection(COLLECTION);
     
     const before = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const result = await collection.deleteMany({ _receivedAt: { $lt: before } });
+    const result = await collection.deleteMany({ recibido_en: { $lt: before } });
     
     return result;
   }

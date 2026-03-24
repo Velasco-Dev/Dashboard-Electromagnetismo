@@ -11,7 +11,7 @@ class MqttService {
     this.client = null;
     this.isConnected = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
+    this.maxReconnectAttempts = 50;
     this.listeners = new Map();
     
     // Configuración del broker MQTT
@@ -20,9 +20,9 @@ class MqttService {
       options: {
         clientId: `solar_dashboard_${Math.random().toString(16).substr(2, 8)}`,
         clean: true,
-        connectTimeout: 4000,
-        reconnectPeriod: 1000,
-        keepalive: 60,
+        connectTimeout: 10000,
+        reconnectPeriod: 5000,
+        keepalive: 120,
         username: undefined, // HiveMQ público no requiere autenticación
         password: undefined,
         will: {
@@ -122,10 +122,7 @@ class MqttService {
   handleClose() {
     console.warn('⚠️ Conexión MQTT cerrada');
     this.isConnected = false;
-    this.emit('connection', { 
-      connected: false, 
-      error: 'Conexión perdida con el broker MQTT' 
-    });
+    // No emitir error aquí - dejar que reconnect se encargue
   }
 
   /**

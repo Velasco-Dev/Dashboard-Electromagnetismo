@@ -85,10 +85,10 @@ class MQTTClient {
       // Guardar en MongoDB
       const result = await Measurement.create(data);
       console.log(`💾 Guardado en MongoDB (ID: ${result.insertedId}):`, {
-        panel_voltage: data.panel_voltage,
-        panel_current: data.panel_current,
-        battery_voltage: data.battery_voltage,
-        power: data.power
+        voltaje_panel: data.panel_voltage,
+        corriente_panel: data.panel_current,
+        voltaje_bateria: data.battery_voltage,
+        potencia: data.power
       });
     } catch (err) {
       console.error('❌ Error al procesar mensaje:', err.message);

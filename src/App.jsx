@@ -2,11 +2,23 @@ import React from 'react';
 import { useSolarData } from './hooks/useSolarData';
 import StatCard from './components/StatCard';
 import ChartCard from './components/ChartCard';
-import { Sun, Battery, BatteryCharging, Zap, Activity, WifiOff, Wifi, Database } from 'lucide-react';
+import { Sun, Battery, BatteryCharging, Zap, Activity, WifiOff, Wifi, Cpu, Database, RefreshCw } from 'lucide-react';
 import './index.css';
 
 function App() {
-  const { data, history, isConnected, error, dataSource } = useSolarData();
+  const { data, history, isConnected, error, dataSource, dbStatus } = useSolarData();
+
+  // Countdown para próxima sincronización DB
+  const [dbCountdown, setDbCountdown] = React.useState(30);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      if (dbStatus.nextSync) {
+        const remaining = Math.max(0, Math.round((new Date(dbStatus.nextSync).getTime() - Date.now()) / 1000));
+        setDbCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [dbStatus.nextSync]);
 
   // Determinamos el estado de la batería
   const isCharging = data.panel_current > 0 && data.panel_voltage > data.battery_voltage;
@@ -26,22 +38,22 @@ function App() {
 
   // Determinar icono y texto de estado según la fuente de datos
   const getStatusInfo = () => {
-    if (isConnected && dataSource === 'mqtt') {
+    if (dataSource === 'mqtt') {
       return {
         icon: <Wifi size={16} />,
-        text: 'ESP32 Conectado - Datos en Tiempo Real',
+        text: 'ESP32 Conectado - Sensores Activos',
         className: 'online'
       };
-    } else if (dataSource === 'simulated') {
+    } else if (dataSource === 'mqtt_no_sensors') {
       return {
-        icon: <Database size={16} />,
-        text: 'Modo Simulación - Datos de Prueba',
-        className: 'offline'
+        icon: <Wifi size={16} />,
+        text: 'ESP32 Conectado - Sin Sensores INA219',
+        className: 'warning'
       };
     } else {
       return {
         icon: <WifiOff size={16} />,
-        text: 'Conectando al Sistema...',
+        text: 'ESP32 Desconectado',
         className: 'offline'
       };
     }
@@ -83,8 +95,24 @@ function App() {
         </div>
       )}
 
-      {/* Información de modo de datos */}
-      {dataSource === 'simulated' && (
+      {dataSource === 'disconnected' && !error && (
+        <div style={{ 
+          backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+          border: '1px solid var(--danger)', 
+          color: 'var(--danger)', 
+          padding: '1rem', 
+          borderRadius: '0.5rem', 
+          marginBottom: '1.5rem', 
+          display: 'flex', 
+          gap: '0.5rem', 
+          alignItems: 'center' 
+        }}>
+          <WifiOff size={20} />
+          ESP32 desconectado. Esperando conexión del dispositivo...
+        </div>
+      )}
+
+      {dataSource === 'mqtt_no_sensors' && (
         <div style={{ 
           backgroundColor: 'rgba(245, 158, 11, 0.1)', 
           border: '1px solid var(--warning)', 
@@ -96,8 +124,8 @@ function App() {
           gap: '0.5rem', 
           alignItems: 'center' 
         }}>
-          <Database size={20} />
-          Usando datos simulados. Para conectar el ESP32, configure las credenciales WiFi y MQTT.
+          <Wifi size={20} />
+          ESP32 conectado y enviando datos, pero los sensores INA219 no están conectados. Los valores son 0.
         </div>
       )}
 
@@ -178,8 +206,16 @@ function App() {
               icon={Zap} 
               colorClass={getPowerColor(data.power)} 
             />
+
+            <StatCard 
+              title="Corriente Carga" 
+              value={data.load_current} 
+              unit="A" 
+              icon={Activity} 
+              colorClass="primary" 
+            />
             
-            {/* Información de conexión MQTT */}
+            {/* Información de conexión MQTT y sensores */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1.5rem' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>
                 Estado de Conexión
@@ -194,13 +230,58 @@ function App() {
                 </span>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Datos: {dataSource === 'mqtt' ? 'ESP32 Real' : dataSource === 'simulated' ? 'Simulados' : 'Conectando...'}
+                Datos: {dataSource === 'mqtt' ? 'ESP32 - Sensores Activos' : dataSource === 'mqtt_no_sensors' ? 'ESP32 - Sin Sensores' : 'Sin datos - Desconectado'}
               </div>
+              {dataSource === 'mqtt' && data.measurement_id > 0 && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Medición #{data.measurement_id}
+                </div>
+              )}
               {data.timestamp && (
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   Última actualización: {new Date(data.timestamp).toLocaleTimeString()}
                 </div>
               )}
+
+              {/* Estado de sensores del ESP32 */}
+              {data.sensors_status && Object.keys(data.sensors_status).length > 0 && (
+                <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                    <Cpu size={14} /> Sensores INA219
+                  </div>
+                  {Object.entries(data.sensors_status).map(([name, status]) => (
+                    <div key={name} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: status.connected ? 'var(--success)' : 'var(--danger)', display: 'inline-block' }}></span>
+                      {name}: {status.connected ? 'Conectado' : 'No conectado'}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Estado de conexión a MongoDB */}
+              <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                  <Database size={14} /> Base de Datos (MongoDB)
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: dbStatus.connected ? 'var(--success)' : 'var(--danger)', display: 'inline-block' }}></span>
+                  {dbStatus.connected ? 'Conectada' : 'Sin conexión'}
+                </div>
+                {dbStatus.connected && (
+                  <>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Registros históricos: {dbStatus.recordCount}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Última sync: {dbStatus.lastSync ? new Date(dbStatus.lastSync).toLocaleTimeString('es-ES', { hour12: false }) : '—'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <RefreshCw size={12} style={dbCountdown <= 3 ? { animation: 'spin 1s linear infinite' } : {}} />
+                      Próxima recarga: {dbCountdown}s
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

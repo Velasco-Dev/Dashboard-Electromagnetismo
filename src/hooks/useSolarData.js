@@ -1,253 +1,194 @@
 /**
  * Custom Hook para manejar datos del sistema fotovoltaico IoT
- * Conecta con MQTT en tiempo real y maneja fallback a datos simulados
+ * Conecta con MQTT en tiempo real - sin datos simulados
  * @author Sistema IoT Fotovoltaico
  */
 import { useState, useEffect, useRef } from 'react';
 import mqttService from '../services/mqttService.js';
 
 export const useSolarData = () => {
-  // Estado principal de los datos
   const [data, setData] = useState({
     panel_voltage: 0,
     panel_current: 0,
     battery_voltage: 0,
     battery_current: 0,
+    load_current: 0,
     power: 0,
+    sensors_status: {},
+    measurement_id: 0,
     timestamp: Date.now()
   });
 
-  // Historial de datos (últimos 50 puntos para gráficos)
   const [history, setHistory] = useState([]);
-  
-  // Estado de conexión MQTT
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
-  const [dataSource, setDataSource] = useState('connecting'); // 'mqtt', 'simulated', 'connecting'
-  
-  // Referencias para intervalos
-  const simulationRef = useRef(null);
-  const connectionTimeoutRef = useRef(null);
+  const [dataSource, setDataSource] = useState('disconnected'); // 'mqtt', 'mqtt_no_sensors', 'disconnected'
+  const [dbStatus, setDbStatus] = useState({
+    connected: false,
+    lastSync: null,
+    recordCount: 0,
+    nextSync: null
+  });
   const lastDataRef = useRef(Date.now());
+  const DB_SYNC_INTERVAL = 30; // segundos entre recargas del historial
 
-  /**
-   * Función para generar datos simulados realistas
-   * Se usa como fallback cuando no hay conexión MQTT
-   */
-  const generateRealisticData = () => {
-    const now = Date.now();
-    const hour = new Date(now).getHours();
-    
-    // Simular variación solar según hora del día (6 AM - 6 PM)
-    let solarFactor = 0;
-    if (hour >= 6 && hour <= 18) {
-      const solarHour = hour - 6;
-      solarFactor = Math.sin((solarHour / 12) * Math.PI) * 0.8 + 0.2;
-    }
-    
-    // Añadir ruido realista
-    const noise = () => (Math.random() - 0.5) * 0.1;
-    
-    const panel_voltage = solarFactor > 0.1 ? (18.5 + solarFactor * 3.5 + noise()) : 0;
-    const panel_current = solarFactor > 0.1 ? (solarFactor * 2.8 + noise()) : 0;
-    
-    const battery_voltage = 12.1 + Math.sin(now / 60000) * 0.3 + noise();
-    const battery_current = panel_voltage > battery_voltage ? 
-      -(panel_current * 0.85 + noise()) : // Cargando (negativo)
-      Math.abs(1.8 + noise()); // Descargando (positivo)
-    
-    const power = Math.abs(panel_voltage * panel_current);
-    
-    return {
-      panel_voltage: Math.max(0, parseFloat(panel_voltage.toFixed(2))),
-      panel_current: Math.max(0, parseFloat(panel_current.toFixed(3))),
-      battery_voltage: parseFloat(battery_voltage.toFixed(2)),
-      battery_current: parseFloat(battery_current.toFixed(3)),
-      power: parseFloat(power.toFixed(2)),
-      timestamp: now
-    };
-  };
-
-  /**
-   * Maneja datos recibidos del ESP32 vía MQTT
-   */
   const handleMqttData = (receivedData) => {
     console.log('📊 Datos recibidos del ESP32:', receivedData);
-    
-    // Validar estructura de datos
-    if (!receivedData.timestamp || 
-        typeof receivedData.panel_voltage !== 'number' || 
-        typeof receivedData.panel_current !== 'number') {
+
+    // Aceptar cualquier objeto con al menos power definido (ESP32 siempre lo envía)
+    if (typeof receivedData !== 'object' || receivedData === null) {
       console.warn('⚠️ Datos MQTT inválidos:', receivedData);
       return;
     }
 
-    // Actualizar timestamp de último dato recibido
     lastDataRef.current = Date.now();
-    setDataSource('mqtt');
-    
-    // Procesar y limpiar datos
-    const processedData = {
-      panel_voltage: parseFloat(receivedData.panel_voltage.toFixed(2)),
-      panel_current: parseFloat(receivedData.panel_current.toFixed(3)),
-      battery_voltage: parseFloat(receivedData.battery_voltage.toFixed(2)),
-      battery_current: parseFloat(receivedData.battery_current.toFixed(3)),
-      power: parseFloat(receivedData.power.toFixed(2)),
-      timestamp: receivedData.timestamp
-    };
-    
-    setData(processedData);
     setError(null);
-    
-    // Actualizar historial
+
+    // El timestamp de la ESP32 viene en segundos Unix, convertir a ms
+    const tsRaw = receivedData.timestamp || 0;
+    const timestamp = tsRaw < 1e12 ? tsRaw * 1000 : tsRaw;
+
+    const processedData = {
+      panel_voltage: Number(receivedData.panel_voltage) || 0,
+      panel_current: Number(receivedData.panel_current) || 0,
+      battery_voltage: Number(receivedData.battery_voltage) || 0,
+      battery_current: Number(receivedData.battery_current) || 0,
+      load_current: Number(receivedData.load_current) || 0,
+      power: Number(receivedData.power) || 0,
+      sensors_status: receivedData.sensors_status || {},
+      measurement_id: receivedData.measurement_id || 0,
+      timestamp: timestamp || Date.now()
+    };
+
+    // Detectar si los sensores INA219 están conectados
+    const sensores = receivedData.sensors_status || {};
+    const haySensorConectado = Object.values(sensores).some(s => s.connected === true);
+
+    if (haySensorConectado) {
+      setDataSource('mqtt');
+    } else {
+      setDataSource('mqtt_no_sensors');
+    }
+
+    setData(processedData);
     updateHistory(processedData);
   };
 
-  /**
-   * Maneja cambios en el estado de conexión MQTT
-   */
   const handleConnectionChange = (connectionData) => {
     console.log('🔌 Estado conexión MQTT:', connectionData);
-    
     setIsConnected(connectionData.connected);
-    
+
     if (connectionData.error) {
       setError(connectionData.error);
-      
-      // Si hay error, activar simulación como fallback
-      if (!simulationRef.current) {
-        startSimulation();
-      }
+      setDataSource('disconnected');
     } else if (connectionData.connected) {
       setError(null);
-      // Si se conecta exitosamente, detener simulación
-      stopSimulation();
+    } else {
+      setDataSource('disconnected');
     }
   };
 
-  /**
-   * Actualiza el historial de datos
-   */
   const updateHistory = (newData) => {
     setHistory(prev => {
       const updated = [...prev, {
         time: new Date(newData.timestamp).toLocaleTimeString('es-ES', { hour12: false }),
         ...newData
       }];
-      // Mantener solo los últimos 50 puntos
-      return updated.length > 50 ? updated.slice(-50) : updated;
+      return updated.length > 100 ? updated.slice(-100) : updated;
     });
   };
 
-  /**
-   * Inicia la simulación de datos como fallback
-   */
-  const startSimulation = () => {
-    console.log('🔄 Iniciando simulación de datos...');
-    setDataSource('simulated');
-    
-    simulationRef.current = setInterval(() => {
-      const simulatedData = generateRealisticData();
-      setData(simulatedData);
-      updateHistory(simulatedData);
-    }, 5000); // Cada 5 segundos para simular el ESP32
-  };
-
-  /**
-   * Detiene la simulación de datos
-   */
-  const stopSimulation = () => {
-    if (simulationRef.current) {
-      console.log('⏹️ Deteniendo simulación de datos');
-      clearInterval(simulationRef.current);
-      simulationRef.current = null;
-    }
-  };
-
-  /**
-   * Verifica si los datos MQTT están llegando
-   */
-  const checkDataFreshness = () => {
-    const now = Date.now();
-    const timeSinceLastData = now - lastDataRef.current;
-    
-    // Si no recibimos datos en más de 30 segundos, activar simulación
-    if (timeSinceLastData > 30000 && isConnected) {
-      console.warn('⚠️ No se han recibido datos recientes, activando simulación');
-      setDataSource('simulated');
-      if (!simulationRef.current) {
-        startSimulation();
+  // Cargar historial desde MongoDB al iniciar
+  const loadHistoryFromDB = async () => {
+    try {
+      const API_URL = 'http://localhost:3001/api/measurements';
+      const res = await fetch(`${API_URL}/recent?minutes=60`);
+      if (!res.ok) throw new Error('Error al obtener historial');
+      const json = await res.json();
+      
+      if (json.success && json.data) {
+        const dbHistory = json.data
+          .reverse() // Más antiguos primero
+          .map(doc => {
+            const ts = doc.marca_tiempo ? (doc.marca_tiempo < 1e12 ? doc.marca_tiempo * 1000 : doc.marca_tiempo) : new Date(doc.recibido_en).getTime();
+            return {
+              time: new Date(ts).toLocaleTimeString('es-ES', { hour12: false }),
+              panel_voltage: doc.voltaje_panel || 0,
+              panel_current: doc.corriente_panel || 0,
+              battery_voltage: doc.voltaje_bateria || 0,
+              battery_current: doc.corriente_bateria || 0,
+              load_current: doc.corriente_carga || 0,
+              power: doc.potencia || 0,
+              timestamp: ts
+            };
+          })
+          .slice(-100); // Últimos 100 puntos
+        
+        setHistory(dbHistory);
+        setDbStatus({
+          connected: true,
+          lastSync: new Date(),
+          recordCount: json.data.length,
+          nextSync: new Date(Date.now() + DB_SYNC_INTERVAL * 1000)
+        });
+        console.log(`📂 Historial cargado de MongoDB: ${dbHistory.length} registros`);
       }
+    } catch (err) {
+      console.warn('⚠️ No se pudo cargar historial de MongoDB:', err.message);
+      setDbStatus(prev => ({ ...prev, connected: false }));
     }
   };
 
-  /**
-   * Efecto principal para inicializar conexión MQTT
-   */
   useEffect(() => {
     console.log('🚀 Inicializando hook useSolarData...');
-    
-    // Configurar listeners MQTT
+
+    // Cargar historial de la DB primero
+    loadHistoryFromDB();
+
     mqttService.on('solarData', handleMqttData);
     mqttService.on('connection', handleConnectionChange);
-    
-    // Intentar conectar al broker MQTT
+
     const initMqtt = async () => {
       try {
         await mqttService.connect();
-      } catch (error) {
-        console.error('❌ Error al conectar MQTT, usando simulación:', error);
-        setError(`Error MQTT: ${error.message}`);
-        startSimulation();
+      } catch (err) {
+        console.error('❌ Error al conectar MQTT:', err);
+        setError('No se pudo conectar al broker MQTT');
+        setDataSource('disconnected');
       }
     };
-
-    // Timeout para activar simulación si no hay conexión en 10 segundos
-    connectionTimeoutRef.current = setTimeout(() => {
-      if (!isConnected) {
-        console.warn('⏰ Timeout de conexión, activando simulación');
-        startSimulation();
-      }
-    }, 10000);
 
     initMqtt();
 
-    // Verificar frescura de datos cada 15 segundos
-    const freshnessInterval = setInterval(checkDataFreshness, 15000);
+    // Recargar historial de la DB periódicamente
+    const dbSyncInterval = setInterval(() => {
+      loadHistoryFromDB();
+    }, DB_SYNC_INTERVAL * 1000);
 
-    // Cleanup al desmontar
+    // Si no llegan datos en 30s, marcar como desconectado
+    const freshnessInterval = setInterval(() => {
+      const timeSinceLastData = Date.now() - lastDataRef.current;
+      if (timeSinceLastData > 30000 && dataSource === 'mqtt') {
+        console.warn('⚠️ Sin datos recientes del ESP32');
+        setDataSource('disconnected');
+      }
+    }, 15000);
+
     return () => {
       mqttService.off('solarData', handleMqttData);
       mqttService.off('connection', handleConnectionChange);
-      stopSimulation();
-      
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-      }
-      
       clearInterval(freshnessInterval);
+      clearInterval(dbSyncInterval);
     };
   }, []);
-
-  /**
-   * Efecto para limpiar error después de un tiempo
-   */
-  useEffect(() => {
-    if (error) {
-      const clearErrorTimeout = setTimeout(() => {
-        setError(null);
-      }, 10000); // Limpiar error después de 10 segundos
-      
-      return () => clearTimeout(clearErrorTimeout);
-    }
-  }, [error]);
 
   return {
     data,
     history,
     isConnected,
     error,
-    dataSource, // Información adicional sobre la fuente de datos
+    dataSource,
+    dbStatus,
     connectionStatus: mqttService.getConnectionStatus()
   };
 };
