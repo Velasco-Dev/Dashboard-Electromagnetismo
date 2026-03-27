@@ -1,5 +1,5 @@
-#define WIFI_SSID "MOVILES"
-#define WIFI_PASSWORD "M0v1les.&2025@"
+#define WIFI_SSID "JUNIOR"
+#define WIFI_PASSWORD "mewValanc3Support"
 
 #define MQTT_BROKER "broker.hivemq.com"
 #define MQTT_PORT 1883

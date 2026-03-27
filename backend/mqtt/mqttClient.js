@@ -68,30 +68,48 @@ class MQTTClient {
     try {
       // Solo procesar mensajes del topic solar/data
       if (topic !== MQTT_TOPIC) {
-        console.log(`⏭️ Ignorando mensaje del topic: ${topic}`);
         return;
       }
 
-      const messageStr = message.toString();
+      let messageStr = message.toString();
       
-      // Validar que sea JSON válido
+      // Aplicar la misma limpieza que en el Frontend para evitar errores de JSON (NaNs)
+      messageStr = messageStr.replace(/:nan/gi, ':0')
+                            .replace(/:nan,/gi, ':0,')
+                            .replace(/,nan/gi, ',0');
+      
+      messageStr = messageStr.replace(/:\s*,/g, ':0,')
+                            .replace(/:\s*\}/g, ':0}');
+
+      // Validar que sea JSON válido antes de parsear
       if (!messageStr.trim().startsWith('{')) {
-        console.warn(`⚠️ Mensaje no es JSON válido en topic ${topic}:`, messageStr.substring(0, 50));
+        console.warn(`⚠️ Mensaje no es JSON válido en topic ${topic}`);
         return;
       }
 
       const data = JSON.parse(messageStr);
       
-      // Guardar en MongoDB
-      const result = await Measurement.create(data);
-      console.log(`💾 Guardado en MongoDB (ID: ${result.insertedId}):`, {
-        voltaje_panel: data.panel_voltage,
-        corriente_panel: data.panel_current,
-        voltaje_bateria: data.battery_voltage,
-        potencia: data.power
+      // Mapear los nombres del ESP32 (camelCase) a los nombres del Backend (snake_case)
+      const mappedData = {
+        panel_voltage: data.panelVoltage || 0,
+        panel_current: data.panelCurrent || 0,
+        battery_voltage: data.batteryVoltage || 0,
+        battery_current: data.batteryCurrent || 0,
+        load_current: data.loadCurrent || 0,
+        power: data.panelPower || 0,
+        measurement_id: data.timestamp || 0, // Usamos el timestamp como ID si no hay uno
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      // Guardar en MongoDB usando el mapeo correcto
+      const result = await Measurement.create(mappedData);
+      console.log(`💾 Guardado en MongoDB:`, {
+        voltaje_panel: mappedData.panel_voltage,
+        potencia: mappedData.power,
+        timestamp: new Date().toLocaleTimeString()
       });
     } catch (err) {
-      console.error('❌ Error al procesar mensaje:', err.message);
+      console.error('❌ Error al procesar/guardar mensaje:', err.message);
     }
   }
 

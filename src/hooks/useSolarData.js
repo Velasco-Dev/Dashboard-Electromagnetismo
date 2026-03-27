@@ -19,7 +19,8 @@ export const useSolarData = () => {
     timestamp: Date.now()
   });
 
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState([]); // Datos historicos de MongoDB
+  const [liveData, setLiveData] = useState([]); // Datos en tiempo real de MQTT (últimos minutos)
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
   const [dataSource, setDataSource] = useState('disconnected'); // 'mqtt', 'mqtt_no_sensors', 'disconnected'
@@ -33,45 +34,38 @@ export const useSolarData = () => {
   const DB_SYNC_INTERVAL = 30; // segundos entre recargas del historial
 
   const handleMqttData = (receivedData) => {
-    console.log('📊 Datos recibidos del ESP32:', receivedData);
+    console.log('📊 Datos en tiempo real (MQTT):', receivedData);
 
-    // Aceptar cualquier objeto con al menos power definido (ESP32 siempre lo envía)
-    if (typeof receivedData !== 'object' || receivedData === null) {
-      console.warn('⚠️ Datos MQTT inválidos:', receivedData);
-      return;
-    }
+    if (typeof receivedData !== 'object' || receivedData === null) return;
 
     lastDataRef.current = Date.now();
     setError(null);
 
-    // El timestamp de la ESP32 viene en segundos Unix, convertir a ms
     const tsRaw = receivedData.timestamp || 0;
-    const timestamp = tsRaw < 1e12 ? tsRaw * 1000 : tsRaw;
+    const timestamp = tsRaw < 1e12 ? tsRaw : tsRaw; // millis() de ESP32 es relativo, pero manejamos la lógica de tiempo
 
     const processedData = {
-      panel_voltage: Number(receivedData.panel_voltage) || 0,
-      panel_current: Number(receivedData.panel_current) || 0,
-      battery_voltage: Number(receivedData.battery_voltage) || 0,
-      battery_current: Number(receivedData.battery_current) || 0,
-      load_current: Number(receivedData.load_current) || 0,
-      power: Number(receivedData.power) || 0,
+      // Mapeo dinámico: acepta camelCase (ESP32) o snake_case (Backend)
+      panel_voltage: Number(receivedData.panelVoltage || receivedData.panel_voltage) || 0,
+      panel_current: Number(receivedData.panelCurrent || receivedData.panel_current) || 0,
+      battery_voltage: Number(receivedData.batteryVoltage || receivedData.battery_voltage) || 0,
+      battery_current: Number(receivedData.batteryCurrent || receivedData.battery_current) || 0,
+      load_current: Number(receivedData.loadCurrent || receivedData.load_current) || 0,
+      power: Number(receivedData.panelPower || receivedData.power) || 0,
       sensors_status: receivedData.sensors_status || {},
-      measurement_id: receivedData.measurement_id || 0,
-      timestamp: timestamp || Date.now()
+      measurement_id: receivedData.timestamp || 0,
+      timestamp: Date.now() // Forzamos timestamp actual en Live para fluidez
     };
 
     // Detectar si los sensores INA219 están conectados
     const sensores = receivedData.sensors_status || {};
     const haySensorConectado = Object.values(sensores).some(s => s.connected === true);
 
-    if (haySensorConectado) {
-      setDataSource('mqtt');
-    } else {
-      setDataSource('mqtt_no_sensors');
-    }
-
+    setDataSource(haySensorConectado ? 'mqtt' : 'mqtt_no_sensors');
     setData(processedData);
-    updateHistory(processedData);
+    
+    // Actualizamos solo la lista de datos "Live"
+    updateLiveHistory(processedData);
   };
 
   const handleConnectionChange = (connectionData) => {
@@ -88,13 +82,14 @@ export const useSolarData = () => {
     }
   };
 
-  const updateHistory = (newData) => {
-    setHistory(prev => {
+  const updateLiveHistory = (newData) => {
+    setLiveData(prev => {
       const updated = [...prev, {
         time: new Date(newData.timestamp).toLocaleTimeString('es-ES', { hour12: false }),
         ...newData
       }];
-      return updated.length > 100 ? updated.slice(-100) : updated;
+      // Mantener solo los últimos 20 puntos para la vista "Live"
+      return updated.length > 20 ? updated.slice(-20) : updated;
     });
   };
 
@@ -184,11 +179,13 @@ export const useSolarData = () => {
 
   return {
     data,
-    history,
+    history,      // Datos de MongoDB
+    liveData,     // Datos de MQTT
     isConnected,
     error,
     dataSource,
     dbStatus,
-    connectionStatus: mqttService.getConnectionStatus()
+    connectionStatus: mqttService.getConnectionStatus(),
+    refreshHistory: loadHistoryFromDB
   };
 };

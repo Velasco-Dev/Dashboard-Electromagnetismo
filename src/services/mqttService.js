@@ -155,8 +155,28 @@ class MqttService {
    */
   handleMessage(topic, message) {
     try {
-      const data = JSON.parse(message.toString());
-      console.log('📩 Mensaje recibido:', { topic, data });
+      let messageStr = message.toString();
+
+      // Caso especial: El mensaje es una llamada a función literal (como se ve en el error del usuario)
+      // client.publish("solar/data", "{\"irradiance\": , ...")
+      if (messageStr.includes('client.publish')) {
+        const match = messageStr.match(/"({.*})"/);
+        if (match && match[1]) {
+          messageStr = match[1].replace(/\\"/g, '"');
+        }
+      }
+      
+      // Corregir valores "nan" (independientemente de mayúsculas/minúsculas)
+      messageStr = messageStr.replace(/:nan/gi, ':0')
+                            .replace(/:nan,/gi, ':0,')
+                            .replace(/,nan/gi, ',0');
+      
+      // Corregir valores vacíos o mal formados como ": ," o ": }"
+      messageStr = messageStr.replace(/:\s*,/g, ':0,')
+                            .replace(/:\s*\}/g, ':0}');
+
+      const data = JSON.parse(messageStr);
+      console.log('📩 Mensaje recibido y procesado:', { topic, data });
       
       switch (topic) {
         case this.config.topics.solarData:
@@ -170,6 +190,7 @@ class MqttService {
       }
     } catch (error) {
       console.error('❌ Error al parsear mensaje MQTT:', error);
+      console.debug('Contenido del mensaje fallido:', message.toString());
     }
   }
 

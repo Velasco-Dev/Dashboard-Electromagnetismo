@@ -30,11 +30,19 @@ body {
   padding: 2rem;
 }
 
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .header h1 {
@@ -42,6 +50,16 @@ body {
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.025em;
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .header h1 {
+    font-size: 1.4rem;
+  }
 }
 
 .status-badge {
@@ -81,11 +99,24 @@ body {
 .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
 
 @media (max-width: 1024px) {
-  .grid-cols-3, .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
   .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
+}
+
+.dashboard-section {
+  width: 100%;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .card {

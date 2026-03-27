@@ -6,7 +6,7 @@ import { Sun, Battery, BatteryCharging, Zap, Activity, WifiOff, Wifi, Cpu, Datab
 import './index.css';
 
 function App() {
-  const { data, history, isConnected, error, dataSource, dbStatus } = useSolarData();
+  const { data, history, liveData, isConnected, error, dataSource, dbStatus } = useSolarData();
 
   // Countdown para próxima sincronización DB
   const [dbCountdown, setDbCountdown] = React.useState(30);
@@ -129,174 +129,131 @@ function App() {
         </div>
       )}
 
-      {/* Sección 1: Generación Panel Solar */}
-      <h2 className="section-title">Generación (Panel Solar)</h2>
-      <div className="grid grid-cols-2">
-        <StatCard 
-          title="Voltaje Panel" 
-          value={data.panel_voltage} 
-          unit="V" 
-          icon={Sun} 
-          colorClass="warning" 
-        />
-        <StatCard 
-          title="Corriente Panel" 
-          value={data.panel_current} 
-          unit="A" 
-          icon={Activity} 
-          colorClass="primary" 
-        />
-        <ChartCard 
-          title="Histórico Voltaje Panel (Tiempo Real)" 
-          data={history} 
-          dataKey="panel_voltage" 
-          colorHex="#f59e0b" 
-          gradientId="colorVoltage" 
-        />
+      {/* 🚀 SECCIÓN 1: GENERACIÓN (PANEL SOLAR) */}
+      <div className="dashboard-section">
+        <h2 className="section-title">☀️ Generación (Panel Solar)</h2>
+        <div className="grid grid-cols-2">
+          <StatCard 
+            title="Voltaje Panel" 
+            value={data.panel_voltage} 
+            unit="V" 
+            icon={Sun} 
+            colorClass="warning" 
+          />
+          <StatCard 
+            title="Corriente Panel" 
+            value={data.panel_current} 
+            unit="A" 
+            icon={Activity} 
+            colorClass="primary" 
+          />
+        </div>
+        <div className="grid grid-cols-1" style={{ marginTop: '1rem' }}>
+          <ChartCard 
+            title="Voltaje en Tiempo Real (MQTT)" 
+            data={liveData} 
+            dataKey="panel_voltage" 
+            colorHex="#f59e0b" 
+            gradientId="colorVoltageLive" 
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-2" style={{ marginTop: '1.5rem', gap: '1.5rem' }}>
-        {/* Sección 2: Batería */}
-        <div>
-          <h2 className="section-title" style={{ marginTop: 0 }}>Almacenamiento (Batería)</h2>
-          <div className="grid grid-cols-1">
-            <StatCard 
-              title="Voltaje Batería" 
-              value={data.battery_voltage} 
-              unit="V" 
-              icon={isCharging ? BatteryCharging : Battery} 
-              colorClass={getBatteryColor(data.battery_voltage)} 
-            />
-            <div className="card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-              <div 
-                style={{ 
-                  backgroundColor: isCharging ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  padding: '1rem', 
-                  borderRadius: '50%'
-                }}
-              >
-                {isCharging ? 
-                  <BatteryCharging size={24} color="var(--success)" /> : 
-                  <Battery size={24} color="var(--warning)" />
-                }
-              </div>
-              <div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>
-                  Estado de Batería
-                </div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: isCharging ? 'var(--success)' : 'var(--warning)' }}>
-                  {isCharging ? 'Cargando' : 'Descargando'}
-                </div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  {Math.abs(data.battery_current).toFixed(3)} A
-                </div>
-              </div>
+      {/* 🔋 SECCIÓN 2: ALMACENAMIENTO (BATERÍA) */}
+      <div className="dashboard-section" style={{ marginTop: '2rem' }}>
+        <h2 className="section-title">🔋 Almacenamiento (Batería)</h2>
+        <div className="grid grid-cols-2 mobile-stack">
+          <StatCard 
+            title="Voltaje Batería" 
+            value={data.battery_voltage} 
+            unit="V" 
+            icon={isCharging ? BatteryCharging : Battery} 
+            colorClass={getBatteryColor(data.battery_voltage)} 
+          />
+          <div className="card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
+            <div 
+              className="status-icon-container"
+              style={{ 
+                backgroundColor: isCharging ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                padding: '1rem', 
+                borderRadius: '50%'
+              }}
+            >
+              {isCharging ? 
+                <BatteryCharging size={24} color="var(--success)" /> : 
+                <Battery size={24} color="var(--warning)" />
+              }
             </div>
-          </div>
-        </div>
-
-        {/* Sección 3: Potencia y Información del Sistema */}
-        <div>
-          <h2 className="section-title" style={{ marginTop: 0 }}>Potencia y Sistema</h2>
-          <div className="grid grid-cols-1">
-            <StatCard 
-              title="Potencia Total" 
-              value={data.power} 
-              unit="W" 
-              icon={Zap} 
-              colorClass={getPowerColor(data.power)} 
-            />
-
-            <StatCard 
-              title="Corriente Carga" 
-              value={data.load_current} 
-              unit="A" 
-              icon={Activity} 
-              colorClass="primary" 
-            />
-            
-            {/* Información de conexión MQTT y sensores */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1.5rem' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>
-                Estado de Conexión
+            <div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>Estado de Carga</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: isCharging ? 'var(--success)' : 'var(--warning)' }}>
+                {isCharging ? 'Cargando' : 'Descargando'}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {isConnected ? 
-                  <Wifi size={20} color="var(--success)" /> : 
-                  <WifiOff size={20} color="var(--danger)" />
-                }
-                <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                  MQTT: {isConnected ? 'Conectado' : 'Desconectado'}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Datos: {dataSource === 'mqtt' ? 'ESP32 - Sensores Activos' : dataSource === 'mqtt_no_sensors' ? 'ESP32 - Sin Sensores' : 'Sin datos - Desconectado'}
-              </div>
-              {dataSource === 'mqtt' && data.measurement_id > 0 && (
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Medición #{data.measurement_id}
-                </div>
-              )}
-              {data.timestamp && (
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Última actualización: {new Date(data.timestamp).toLocaleTimeString()}
-                </div>
-              )}
-
-              {/* Estado de sensores del ESP32 */}
-              {data.sensors_status && Object.keys(data.sensors_status).length > 0 && (
-                <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                    <Cpu size={14} /> Sensores INA219
-                  </div>
-                  {Object.entries(data.sensors_status).map(([name, status]) => (
-                    <div key={name} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: status.connected ? 'var(--success)' : 'var(--danger)', display: 'inline-block' }}></span>
-                      {name}: {status.connected ? 'Conectado' : 'No conectado'}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Estado de conexión a MongoDB */}
-              <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                  <Database size={14} /> Base de Datos (MongoDB)
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: dbStatus.connected ? 'var(--success)' : 'var(--danger)', display: 'inline-block' }}></span>
-                  {dbStatus.connected ? 'Conectada' : 'Sin conexión'}
-                </div>
-                {dbStatus.connected && (
-                  <>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Registros históricos: {dbStatus.recordCount}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Última sync: {dbStatus.lastSync ? new Date(dbStatus.lastSync).toLocaleTimeString('es-ES', { hour12: false }) : '—'}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <RefreshCw size={12} style={dbCountdown <= 3 ? { animation: 'spin 1s linear infinite' } : {}} />
-                      Próxima recarga: {dbCountdown}s
-                    </div>
-                  </>
-                )}
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                {Math.abs(data.battery_current).toFixed(3)} mA
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1" style={{ marginTop: '1.5rem' }}>
-        <ChartCard 
-          title="Potencia Generada (Tiempo Real)" 
-          data={history} 
-          dataKey="power" 
-          colorHex="#10b981" 
-          gradientId="colorPower" 
-        />
+      {/* 💡 SECCIÓN 3: CONTROL Y SISTEMA (LEDS / MQTT) */}
+      <div className="dashboard-section" style={{ marginTop: '2rem' }}>
+        <h2 className="section-title">⚙️ Control y Sistema</h2>
+        <div className="grid grid-cols-3">
+          {/* Potencia */}
+          <StatCard 
+            title="Potencia Total" 
+            value={data.power} 
+            unit="mW" 
+            icon={Zap} 
+            colorClass={getPowerColor(data.power)} 
+          />
+
+          {/* Estado de Conexión (LED Visual) */}
+          <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Estado Conectividad</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ 
+                width: '12px', 
+                height: '12px', 
+                borderRadius: '50%', 
+                backgroundColor: isConnected ? 'var(--success)' : 'var(--danger)',
+                boxShadow: isConnected ? '0 0 10px var(--success)' : 'none'
+              }}></div>
+              <span style={{ fontWeight: 600 }}>{isConnected ? 'MQTT ONLINE' : 'OFFLINE'}</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              ESP32: {dataSource === 'mqtt' ? 'Activo' : 'Buscando...'}
+            </div>
+          </div>
+
+          {/* Base de Datos */}
+          <div className="card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Database size={24} color={dbStatus.connected ? 'var(--primary)' : 'var(--danger)'} />
+            <div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Carga Histórica</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {dbStatus.connected ? `Sincronizado (${dbStatus.recordCount})` : 'Sin DB'}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* 📜 SECCIÓN 4: HISTORIAL (BASE DE DATOS MONGO) */}
+      <div className="dashboard-section" style={{ marginTop: '2rem', marginBottom: '3rem' }}>
+        <h2 className="section-title">📜 Historial Consumido (MongoDB)</h2>
+        <div className="grid grid-cols-1">
+          <ChartCard 
+            title="Historial de Voltaje de Panel (Datos de Base de Datos)" 
+            data={history} 
+            dataKey="panel_voltage" 
+            colorHex="#3b82f6" 
+            gradientId="colorVoltageDB" 
+          />
+        </div>
+      </div>
     </div>
   );
 }
