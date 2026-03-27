@@ -13,7 +13,7 @@ class MqttService {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 50;
     this.listeners = new Map();
-    
+
     // Configuración del broker MQTT
     this.config = {
       broker: 'wss://broker.hivemq.com:8884/mqtt',
@@ -27,8 +27,8 @@ class MqttService {
         password: undefined,
         will: {
           topic: 'solar/status',
-          payload: JSON.stringify({ 
-            client: 'dashboard', 
+          payload: JSON.stringify({
+            client: 'dashboard',
             status: 'offline',
             timestamp: Date.now()
           }),
@@ -48,10 +48,10 @@ class MqttService {
    */
   async connect() {
     try {
-      console.log('🔌 Conectando al broker MQTT...', this.config.broker);
-      
+      // console.log(' Conectando al broker MQTT...', this.config.broker);
+
       this.client = mqtt.connect(this.config.broker, this.config.options);
-      
+
       // Eventos de conexión
       this.client.on('connect', this.handleConnect.bind(this));
       this.client.on('error', this.handleError.bind(this));
@@ -59,23 +59,23 @@ class MqttService {
       this.client.on('reconnect', this.handleReconnect.bind(this));
       this.client.on('message', this.handleMessage.bind(this));
       this.client.on('offline', this.handleOffline.bind(this));
-      
+
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Timeout al conectar con MQTT broker'));
         }, 10000);
-        
+
         this.client.once('connect', () => {
           clearTimeout(timeout);
           resolve();
         });
-        
+
         this.client.once('error', (error) => {
           clearTimeout(timeout);
           reject(error);
         });
       });
-      
+
     } catch (error) {
       console.error('❌ Error al conectar MQTT:', error);
       throw error;
@@ -86,16 +86,16 @@ class MqttService {
    * Maneja la conexión exitosa
    */
   handleConnect() {
-    console.log('✅ Conectado al broker MQTT');
+    console.log(' Conectado al broker MQTT');
     this.isConnected = true;
     this.reconnectAttempts = 0;
-    
+
     // Suscribirse a los topics
     this.subscribe();
-    
+
     // Notificar estado de conexión
     this.emit('connection', { connected: true, error: null });
-    
+
     // Publicar estado online del dashboard
     this.publish(this.config.topics.solarStatus, {
       client: 'dashboard',
@@ -110,9 +110,9 @@ class MqttService {
   handleError(error) {
     console.error('❌ Error MQTT:', error);
     this.isConnected = false;
-    this.emit('connection', { 
-      connected: false, 
-      error: `Error de conexión: ${error.message}` 
+    this.emit('connection', {
+      connected: false,
+      error: `Error de conexión: ${error.message}`
     });
   }
 
@@ -120,7 +120,7 @@ class MqttService {
    * Maneja la desconexión
    */
   handleClose() {
-    console.warn('⚠️ Conexión MQTT cerrada');
+    console.warn('Conexión MQTT cerrada');
     this.isConnected = false;
     // No emitir error aquí - dejar que reconnect se encargue
   }
@@ -131,13 +131,13 @@ class MqttService {
   handleReconnect() {
     this.reconnectAttempts++;
     console.log(`🔄 Reintentando conexión MQTT... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-    
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('❌ Máximo número de reconexiones alcanzado');
       this.disconnect();
-      this.emit('connection', { 
-        connected: false, 
-        error: 'No se pudo reconectar al broker MQTT' 
+      this.emit('connection', {
+        connected: false,
+        error: 'No se pudo reconectar al broker MQTT'
       });
     }
   }
@@ -165,19 +165,20 @@ class MqttService {
           messageStr = match[1].replace(/\\"/g, '"');
         }
       }
-      
+
       // Corregir valores "nan" (independientemente de mayúsculas/minúsculas)
       messageStr = messageStr.replace(/:nan/gi, ':0')
-                            .replace(/:nan,/gi, ':0,')
-                            .replace(/,nan/gi, ',0');
-      
+        .replace(/:nan,/gi, ':0,')
+        .replace(/,nan/gi, ',0');
+
       // Corregir valores vacíos o mal formados como ": ," o ": }"
       messageStr = messageStr.replace(/:\s*,/g, ':0,')
-                            .replace(/:\s*\}/g, ':0}');
+        .replace(/:\s*\}/g, ':0}');
 
       const data = JSON.parse(messageStr);
-      console.log('📩 Mensaje recibido y procesado:', { topic, data });
-      
+
+      console.log(' Mensaje recibido y procesado:', { topic, data });
+
       switch (topic) {
         case this.config.topics.solarData:
           this.emit('solarData', data);
@@ -199,7 +200,7 @@ class MqttService {
    */
   subscribe() {
     const topics = Object.values(this.config.topics);
-    
+
     topics.forEach(topic => {
       this.client.subscribe(topic, { qos: 1 }, (error) => {
         if (error) {
@@ -280,18 +281,18 @@ class MqttService {
   disconnect() {
     if (this.client) {
       console.log('🔌 Desconectando del broker MQTT...');
-      
+
       // Publicar estado offline antes de desconectar
       this.publish(this.config.topics.solarStatus, {
         client: 'dashboard',
         status: 'offline',
         timestamp: Date.now()
       });
-      
+
       this.client.end(false, () => {
         console.log('✅ Desconectado del broker MQTT');
       });
-      
+
       this.client = null;
       this.isConnected = false;
     }

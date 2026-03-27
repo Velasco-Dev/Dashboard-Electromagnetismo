@@ -34,7 +34,7 @@ export const useSolarData = () => {
   const DB_SYNC_INTERVAL = 30; // segundos entre recargas del historial
 
   const handleMqttData = (receivedData) => {
-    console.log('📊 Datos en tiempo real (MQTT):', receivedData);
+    // console.log('📊 Datos en tiempo real (MQTT):', receivedData);
 
     if (typeof receivedData !== 'object' || receivedData === null) return;
 
@@ -46,12 +46,12 @@ export const useSolarData = () => {
 
     const processedData = {
       // Mapeo dinámico: acepta camelCase (ESP32) o snake_case (Backend)
-      panel_voltage: Number(receivedData.panelVoltage || receivedData.panel_voltage) || 0,
-      panel_current: Number(receivedData.panelCurrent || receivedData.panel_current) || 0,
-      battery_voltage: Number(receivedData.batteryVoltage || receivedData.battery_voltage) || 0,
-      battery_current: Number(receivedData.batteryCurrent || receivedData.battery_current) || 0,
-      load_current: Number(receivedData.loadCurrent || receivedData.load_current) || 0,
-      power: Number(receivedData.panelPower || receivedData.power) || 0,
+      panel_voltage: Number(receivedData.panel_voltage || receivedData.panelVoltage) || 0,
+      panel_current: Number(receivedData.panel_current || receivedData.panelCurrent) || 0,
+      battery_voltage: Number(receivedData.battery_voltage || receivedData.batteryVoltage) || 0,
+      battery_current: Number(receivedData.battery_current || receivedData.batteryCurrent) || 0,
+      load_current: Number(receivedData.load_current || receivedData.loadCurrent) || 0,
+      power: Number(receivedData.power || receivedData.panelPower) || 0,
       sensors_status: receivedData.sensors_status || {},
       measurement_id: receivedData.timestamp || 0,
       timestamp: Date.now() // Forzamos timestamp actual en Live para fluidez
@@ -59,11 +59,13 @@ export const useSolarData = () => {
 
     // Detectar si los sensores INA219 están conectados
     const sensores = receivedData.sensors_status || {};
-    const haySensorConectado = Object.values(sensores).some(s => s.connected === true);
+    // Si el ESP32 envía datos de voltaje mayores a 0, asumimos que hay sensores activos aunque no envíe el diccionario de estado
+    const hayLecturaPositiva = processedData.panel_voltage > 0 || processedData.battery_voltage > 0;
+    const haySensorConectado = Object.values(sensores).some(s => s.connected === true) || hayLecturaPositiva;
 
     setDataSource(haySensorConectado ? 'mqtt' : 'mqtt_no_sensors');
     setData(processedData);
-    
+
     // Actualizamos solo la lista de datos "Live"
     updateLiveHistory(processedData);
   };
@@ -100,7 +102,8 @@ export const useSolarData = () => {
       const res = await fetch(`${API_URL}/recent?minutes=60`);
       if (!res.ok) throw new Error('Error al obtener historial');
       const json = await res.json();
-      
+      console.log(json);
+
       if (json.success && json.data) {
         const dbHistory = json.data
           .reverse() // Más antiguos primero
@@ -118,7 +121,7 @@ export const useSolarData = () => {
             };
           })
           .slice(-100); // Últimos 100 puntos
-        
+
         setHistory(dbHistory);
         setDbStatus({
           connected: true,
@@ -126,16 +129,16 @@ export const useSolarData = () => {
           recordCount: json.data.length,
           nextSync: new Date(Date.now() + DB_SYNC_INTERVAL * 1000)
         });
-        console.log(`📂 Historial cargado de MongoDB: ${dbHistory.length} registros`);
+        // console.log(` Historial cargado de MongoDB: ${dbHistory.length} registros`);
       }
     } catch (err) {
-      console.warn('⚠️ No se pudo cargar historial de MongoDB:', err.message);
+      // console.warn('⚠️ No se pudo cargar historial de MongoDB:', err.message);
       setDbStatus(prev => ({ ...prev, connected: false }));
     }
   };
 
   useEffect(() => {
-    console.log('🚀 Inicializando hook useSolarData...');
+    // console.log('🚀 Inicializando hook useSolarData...');
 
     // Cargar historial de la DB primero
     loadHistoryFromDB();

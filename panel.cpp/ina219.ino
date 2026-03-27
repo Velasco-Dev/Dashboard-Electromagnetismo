@@ -23,25 +23,26 @@ void ina219Init() {
 String readSensors() {
 
   float vp = panel.getBusVoltage_V();
-  float ip = panel.getCurrent_mA() / 1000;
+  float ip = panel.getCurrent_mA() / 1000.0;
 
   float vb = battery.getBusVoltage_V();
-  float ib = battery.getCurrent_mA() / 1000;
+  float ib = battery.getCurrent_mA() / 1000.0;
 
   float vl = load.getBusVoltage_V();
-  float il = load.getCurrent_mA() / 1000;
+  float il = load.getCurrent_mA() / 1000.0;
 
   float power = vp * ip;
 
   String json = "{";
 
   json += "\"panel_voltage\":" + String(vp,2) + ",";
-  json += "\"panel_current\":" + String(ip,2) + ",";
+  json += "\"panel_current\":" + String(ip,3) + ",";
   json += "\"battery_voltage\":" + String(vb,2) + ",";
-  json += "\"battery_current\":" + String(ib,2) + ",";
+  json += "\"battery_current\":" + String(ib,3) + ",";
   json += "\"load_voltage\":" + String(vl,2) + ",";
-  json += "\"load_current\":" + String(il,2) + ",";
-  json += "\"power\":" + String(power,2);
+  json += "\"load_current\":" + String(il,3) + ",";
+  json += "\"power\":" + String(power,3) + ",";
+  json += "\"timestamp\":" + String(millis());
 
   json += "}";
 
