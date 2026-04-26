@@ -1,5 +1,5 @@
-#define WIFI_SSID "JUNIOR"
-#define WIFI_PASSWORD "mewValanc3Support"
+#define WIFI_SSID "FAMILIA_URBANO2G"
+#define WIFI_PASSWORD "1061804052"
 
 #define MQTT_BROKER "broker.hivemq.com"
 #define MQTT_PORT 1883

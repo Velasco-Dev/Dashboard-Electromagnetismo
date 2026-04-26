@@ -97,6 +97,18 @@ class MeasurementController {
       });
     }
   }
+
+  static async saveMeasurement(data) {
+    try {
+      // Guardar la medición en MongoDB
+      const measurement = await Measurement.create(data);
+      console.log('✅ Medición guardada:', measurement);
+      return measurement;
+    } catch (err) {
+      console.error('❌ Error al guardar medición:', err.message);
+      throw err;
+    }
+  }
 }
 
 module.exports = MeasurementController;

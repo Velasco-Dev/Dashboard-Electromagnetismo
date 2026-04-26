@@ -89,24 +89,24 @@ class MQTTClient {
 
       const data = JSON.parse(messageStr);
       
-      // Mapear los nombres del ESP32 (camelCase) a los nombres del Backend (snake_case)
+      // Mapear los nombres del ESP32 (camelCase) a los nombres en español del Backend
       const mappedData = {
-        panel_voltage: data.panelVoltage || 0,
-        panel_current: data.panelCurrent || 0,
-        battery_voltage: data.batteryVoltage || 0,
-        battery_current: data.batteryCurrent || 0,
-        load_current: data.loadCurrent || 0,
-        power: data.panelPower || 0,
-        measurement_id: data.timestamp || 0, // Usamos el timestamp como ID si no hay uno
-        timestamp: Math.floor(Date.now() / 1000)
+        voltaje_panel: data.panel_voltage || 0,
+        corriente_panel: data.panel_current || 0,
+        voltaje_bateria: data.battery_voltage || 0,
+        corriente_bateria: data.battery_current || 0,
+        voltaje_carga: data.load_voltage || 0,
+        corriente_carga: data.load_current || 0,
+        potencia: data.power || 0,
+        marca_tiempo: data.timestamp || Math.floor(Date.now() / 1000)
       };
 
-      // Guardar en MongoDB usando el mapeo correcto
-      const result = await Measurement.create(mappedData);
+      // Llamar al controlador para guardar los datos
+      const result = await require('../controllers/measurementController').saveMeasurement(mappedData);
       console.log(`💾 Guardado en MongoDB:`, {
-        voltaje_panel: mappedData.panel_voltage,
-        potencia: mappedData.power,
-        timestamp: new Date().toLocaleTimeString()
+        voltaje_panel: mappedData.voltaje_panel,
+        potencia: mappedData.potencia,
+        marca_tiempo: new Date(mappedData.marca_tiempo * 1000).toLocaleTimeString()
       });
     } catch (err) {
       console.error('❌ Error al procesar/guardar mensaje:', err.message);

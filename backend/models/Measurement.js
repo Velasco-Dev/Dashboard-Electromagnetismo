@@ -11,15 +11,15 @@ class Measurement {
     const collection = db.collection(COLLECTION);
     
     const document = {
-      voltaje_panel: data.panel_voltage || 0,
-      corriente_panel: data.panel_current || 0,
-      voltaje_bateria: data.battery_voltage || 0,
-      corriente_bateria: data.battery_current || 0,
-      corriente_carga: data.load_current || 0,
-      potencia: data.power || 0,
-      estado_sensores: data.sensors_status || {},
-      id_medicion: data.measurement_id || 0,
-      marca_tiempo: data.timestamp || Math.floor(Date.now() / 1000),
+      voltaje_panel: data.voltaje_panel || 0,
+      corriente_panel: data.corriente_panel || 0,
+      voltaje_bateria: data.voltaje_bateria || 0,
+      corriente_bateria: data.corriente_bateria || 0,
+      corriente_carga: data.corriente_carga || 0,
+      potencia: data.potencia || 0,
+      estado_sensores: data.estado_sensores || {},
+      id_medicion: data.id_medicion || 0,
+      marca_tiempo: data.marca_tiempo || Math.floor(Date.now() / 1000),
       recibido_en: new Date(),
       creado_en: new Date()
     };
