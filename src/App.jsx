@@ -148,13 +148,20 @@ function App() {
             colorClass="primary" 
           />
         </div>
-        <div className="grid grid-cols-1" style={{ marginTop: '1rem' }}>
+        <div className="grid grid-cols-2 mobile-stack" style={{ marginTop: '1rem', gap: '1.5rem' }}>
           <ChartCard 
             title="Voltaje en Tiempo Real (MQTT)" 
             data={liveData} 
             dataKey="panel_voltage" 
             colorHex="#f59e0b" 
             gradientId="colorVoltageLive" 
+          />
+          <ChartCard 
+            title="Corriente en Tiempo Real (MQTT) [Amperios]" 
+            data={liveData} 
+            dataKey="panel_current" 
+            colorHex="#3b82f6" 
+            gradientId="colorCurrentLive" 
           />
         </div>
       </div>
