@@ -1,5 +1,5 @@
 // backend/mqtt/mqttClient.js
-// Cliente MQTT para suscribirse a datos solares
+// Cliente MQTT para suscribirse a datos 
 
 const mqtt = require('mqtt');
 const Measurement = require('../models/Measurement');
@@ -16,11 +16,12 @@ class MQTTClient {
     this.isConnected = false;
   }
 
+
   connect() {
     return new Promise((resolve, reject) => {
       // Timeout de 10 segundos para intentar conectar
       const connectionTimeout = setTimeout(() => {
-        console.warn('⚠️ MQTT: Timeout en conexión. Continuando sin MQTT por ahora...');
+        console.warn('⚠️ MQTT: Timeout en cone. Continuando sin MQTT por ahora...');
         console.log('📌 El servidor REST funcionará normalmente. MQTT se reconectará automáticamente.');
         resolve(); // Resolver sin error para permitir que el servidor continúe
       }, 10000);
@@ -41,7 +42,7 @@ class MQTTClient {
         clearTimeout(connectionTimeout);
         console.log('✅ Conectado a MQTT');
         this.isConnected = true;
-        
+
         this.client.subscribe(MQTT_TOPIC, { qos: 1 }, (err) => {
           if (err) {
             console.error('❌ Error al suscribirse:', err);
@@ -77,14 +78,14 @@ class MQTTClient {
       }
 
       let messageStr = message.toString();
-      
+
       // Aplicar la misma limpieza que en el Frontend para evitar errores de JSON (NaNs)
       messageStr = messageStr.replace(/:nan/gi, ':0')
-                            .replace(/:nan,/gi, ':0,')
-                            .replace(/,nan/gi, ',0');
-      
+        .replace(/:nan,/gi, ':0,')
+        .replace(/,nan/gi, ',0');
+
       messageStr = messageStr.replace(/:\s*,/g, ':0,')
-                            .replace(/:\s*\}/g, ':0}');
+        .replace(/:\s*\}/g, ':0}');
 
       // Validar que sea JSON válido antes de parsear
       if (!messageStr.trim().startsWith('{')) {
@@ -93,7 +94,7 @@ class MQTTClient {
       }
 
       const data = JSON.parse(messageStr);
-      
+
       // Mapear los nombres del ESP32 (camelCase) a los nombres en español del Backend
       const mappedData = {
         voltaje_panel: data.panel_voltage || 0,
