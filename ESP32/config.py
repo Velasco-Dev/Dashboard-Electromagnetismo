@@ -1,7 +1,7 @@
 # config.py
 # Configuración del sistema IoT fotovoltaico ESP32
 
-from env import WIFI_SSID, WIFI_PASSWORD, MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID
+from env import WIFI_SSID, WIFI_PASSWORD, MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD
 
 # Configuración WiFi
 WIFI_CONFIG = {
@@ -15,6 +15,8 @@ MQTT_CONFIG = {
     'BROKER': MQTT_BROKER,
     'PORT': MQTT_PORT,
     'CLIENT_ID': MQTT_CLIENT_ID,
+    'USER': MQTT_USER,
+    'PASSWORD': MQTT_PASSWORD,
     'TOPIC_DATA': 'solar/data',
     'TOPIC_STATUS': 'solar/status',
     'KEEPALIVE': 60,

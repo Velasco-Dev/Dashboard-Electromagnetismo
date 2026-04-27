@@ -1,10 +1,12 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
-WiFiClient espClient;
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 void mqttConnect() {
+  espClient.setInsecure(); // Permite conectar a HiveMQ Cloud sin validar el certificado raíz
   client.setServer(MQTT_BROKER, MQTT_PORT);
   Serial.println("Configurando MQTT");
 }
@@ -22,7 +24,7 @@ void mqttReconnect() {
 
   Serial.print("Intentando conexión MQTT...");
 
-  if (client.connect(MQTT_CLIENT_ID)) {
+  if (client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD)) {
     Serial.println("Conectado");
     publishStatus();
   } else {

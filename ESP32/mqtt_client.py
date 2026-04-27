@@ -31,7 +31,11 @@ class MQTTManager:
                 client_id=MQTT_CONFIG['CLIENT_ID'],
                 server=MQTT_CONFIG['BROKER'],
                 port=MQTT_CONFIG['PORT'],
-                keepalive=MQTT_CONFIG['KEEPALIVE']
+                user=MQTT_CONFIG.get('USER'),
+                password=MQTT_CONFIG.get('PASSWORD'),
+                keepalive=MQTT_CONFIG['KEEPALIVE'],
+                ssl=True,
+                ssl_params={'server_hostname': MQTT_CONFIG['BROKER']}
             )
 
             last_will = {

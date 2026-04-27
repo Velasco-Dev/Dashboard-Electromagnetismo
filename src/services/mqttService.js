@@ -16,15 +16,15 @@ class MqttService {
 
     // Configuración del broker MQTT
     this.config = {
-      broker: 'wss://broker.hivemq.com:8884/mqtt',
+      broker: 'wss://81f19fbf222f43c9a70f4d8fbf68f0f1.s1.eu.hivemq.cloud:8884/mqtt',
       options: {
         clientId: `solar_dashboard_${Math.random().toString(16).substr(2, 8)}`,
         clean: true,
         connectTimeout: 10000,
         reconnectPeriod: 5000,
-        keepalive: 120,
-        username: undefined, // HiveMQ público no requiere autenticación
-        password: undefined,
+        keepalive: 60,
+        username: "alvarolpz43",
+        password: "12345678Aj",
         will: {
           topic: 'solar/status',
           payload: JSON.stringify({
@@ -47,6 +47,15 @@ class MqttService {
    * Inicializa la conexión MQTT
    */
   async connect() {
+    if (this.client) {
+      // Si ya está conectado o conectando, resolvemos inmediatamente
+      if (this.isConnected) {
+        // Emitimos el evento para que los nuevos listeners sepan que ya está conectado
+        this.emit('connection', { connected: true, error: null });
+      }
+      return Promise.resolve();
+    }
+
     try {
       // console.log(' Conectando al broker MQTT...', this.config.broker);
 
