@@ -4,8 +4,11 @@
 const mqtt = require('mqtt');
 const Measurement = require('../models/Measurement');
 
-const MQTT_BROKER = process.env.MQTT_BROKER || 'wss://broker.hivemq.com:8884/mqtt';
+// Broker privado HiveMQ Cloud (mismo que usa el Dashboard y el ESP32)
+const MQTT_BROKER = process.env.MQTT_BROKER || 'wss://81f19fbf222f43c9a70f4d8fbf68f0f1.s1.eu.hivemq.cloud:8884/mqtt';
 const MQTT_TOPIC = process.env.MQTT_TOPIC || 'solar/data';
+const MQTT_USER = process.env.MQTT_USER || 'alvarolpz43';
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '12345678Aj';
 
 class MQTTClient {
   constructor() {
@@ -25,11 +28,13 @@ class MQTTClient {
       this.client = mqtt.connect(MQTT_BROKER, {
         protocol: 'wss',
         connectTimeout: 8000,
-        reconnectPeriod: 5000, // Reintentar cada 5 segundos
+        reconnectPeriod: 5000,
         clientId: 'solar_backend_' + Math.random().toString(16).substr(2, 8),
         clean: true,
         keepalive: 60,
-        rejectUnauthorized: false // Para brokers con certificados autofirmados
+        username: MQTT_USER,
+        password: MQTT_PASSWORD,
+        rejectUnauthorized: false
       });
 
       this.client.on('connect', () => {

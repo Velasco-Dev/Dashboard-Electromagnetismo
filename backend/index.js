@@ -10,29 +10,28 @@ const mqttClient = require('./mqtt/mqttClient');
 const PORT = process.env.PORT || 3001;
 
 async function start() {
+  console.log('🚀 Iniciando Sistema de Monitoreo Solar...\n');
+
+  // 1. Intentar conectar a MongoDB (no bloquea el servidor si falla)
   try {
-    console.log('🚀 Iniciando Sistema de Monitoreo Solar...\n');
-    
-    // 1. Conectar a MongoDB
     await connectDB();
-    
-    // 2. Conectar a MQTT (no bloquea si falla - se reconectará automáticamente)
-    mqttClient.connect().catch(err => {
-      console.warn('⚠️ No se pudo conectar a MQTT inicialmente:', err.message);
-      console.log('📌 El backend funcionará sin MQTT hasta que se reconecte.');
-    });
-    
-    // 3. Iniciar servidor Express
-    app.listen(PORT, () => {
-      console.log(`\n✅ Servidor ejecutándose en http://localhost:${PORT}`);
-      console.log(`📊 API disponible en http://localhost:${PORT}/api/measurements`);
-      console.log(`❤️ Health check en http://localhost:${PORT}/api/health\n`);
-    });
-    
   } catch (err) {
-    console.error('❌ Error al iniciar:', err);
-    process.exit(1);
+    console.warn('⚠️  MongoDB no disponible:', err.message);
+    console.log('📌 El backend arrancará sin base de datos (solo datos en tiempo real vía MQTT).\n');
   }
+
+  // 2. Conectar a MQTT (no bloquea si falla - se reconectará automáticamente)
+  mqttClient.connect().catch(err => {
+    console.warn('⚠️ No se pudo conectar a MQTT inicialmente:', err.message);
+    console.log('📌 El backend funcionará sin MQTT hasta que se reconecte.');
+  });
+
+  // 3. Iniciar servidor Express siempre
+  app.listen(PORT, () => {
+    console.log(`\n✅ Servidor ejecutándose en http://localhost:${PORT}`);
+    console.log(`📊 API disponible en http://localhost:${PORT}/api/measurements`);
+    console.log(`❤️ Health check en http://localhost:${PORT}/api/health\n`);
+  });
 }
 
 // Manejar apagado graceful
