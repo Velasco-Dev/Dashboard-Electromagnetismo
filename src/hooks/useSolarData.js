@@ -120,7 +120,7 @@ export const useSolarData = () => {
   // Cargar historial desde MongoDB al iniciar
   const loadHistoryFromDB = async () => {
     try {
-      const API_URL = 'http://localhost:3001/api/measurements';
+      const API_URL = 'https://solar-backend-98oy.onrender.com/api/measurements';
       const recentRes = await fetch(`${API_URL}/recent?minutes=60`);
       if (!recentRes.ok) throw new Error('Error al obtener historial reciente');
 
