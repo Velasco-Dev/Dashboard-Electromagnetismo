@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: solar-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # --- Secrets: set these manually in Render dashboard or via CLI ---
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: MQTT_BROKER
+        sync: false
+      - key: MQTT_TOPIC
+        sync: false
+      - key: MQTT_USER
+        sync: false
+      - key: MQTT_PASSWORD
+        sync: false
