@@ -36,7 +36,7 @@ void wifiReconnect() {
   if (!wifiCheck()) {
     reconnectAttempts++;
     Serial.println("Reconectando WiFi...");
-    WiFi.disconnect();
+    WiFi.disconnect(true); 
     delay(2000);
     wifiConnect();
   }

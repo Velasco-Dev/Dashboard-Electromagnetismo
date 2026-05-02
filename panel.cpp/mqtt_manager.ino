@@ -2,8 +2,8 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
-WiFiClientSecure espClient;
-PubSubClient client(espClient);
+extern WiFiClientSecure espClient;
+extern PubSubClient client;
 
 void mqttConnect() {
   espClient.setInsecure(); // Permite conectar a HiveMQ Cloud sin validar el certificado raíz
