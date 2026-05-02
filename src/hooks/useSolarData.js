@@ -33,6 +33,28 @@ export const useSolarData = () => {
   const lastDataRef = useRef(Date.now());
   const DB_SYNC_INTERVAL = 30; // segundos entre recargas del historial
 
+  const mapHistoryDocuments = (documents) => {
+    return documents
+      .reverse()
+      .map(doc => {
+        const ts = doc.marca_tiempo
+          ? (doc.marca_tiempo < 1e12 ? doc.marca_tiempo * 1000 : doc.marca_tiempo)
+          : new Date(doc.recibido_en).getTime();
+
+        return {
+          time: new Date(ts).toLocaleTimeString('es-ES', { hour12: false }),
+          panel_voltage: doc.voltaje_panel || 0,
+          panel_current: doc.corriente_panel || 0,
+          battery_voltage: doc.voltaje_bateria || 0,
+          battery_current: doc.corriente_bateria || 0,
+          load_current: doc.corriente_carga || 0,
+          power: doc.potencia || 0,
+          timestamp: ts
+        };
+      })
+      .slice(-100);
+  };
+
   const handleMqttData = (receivedData) => {
     // console.log('📊 Datos en tiempo real (MQTT):', receivedData);
 
@@ -99,37 +121,41 @@ export const useSolarData = () => {
   const loadHistoryFromDB = async () => {
     try {
       const API_URL = 'http://localhost:3001/api/measurements';
-      const res = await fetch(`${API_URL}/recent?minutes=60`);
-      if (!res.ok) throw new Error('Error al obtener historial');
-      const json = await res.json();
-      console.log(json);
+      const recentRes = await fetch(`${API_URL}/recent?minutes=60`);
+      if (!recentRes.ok) throw new Error('Error al obtener historial reciente');
 
-      if (json.success && json.data) {
-        const dbHistory = json.data
-          .reverse() // Más antiguos primero
-          .map(doc => {
-            const ts = doc.marca_tiempo ? (doc.marca_tiempo < 1e12 ? doc.marca_tiempo * 1000 : doc.marca_tiempo) : new Date(doc.recibido_en).getTime();
-            return {
-              time: new Date(ts).toLocaleTimeString('es-ES', { hour12: false }),
-              panel_voltage: doc.voltaje_panel || 0,
-              panel_current: doc.corriente_panel || 0,
-              battery_voltage: doc.voltaje_bateria || 0,
-              battery_current: doc.corriente_bateria || 0,
-              load_current: doc.corriente_carga || 0,
-              power: doc.potencia || 0,
-              timestamp: ts
-            };
-          })
-          .slice(-100); // Últimos 100 puntos
+      const recentJson = await recentRes.json();
+      let historyDocuments = recentJson.success && Array.isArray(recentJson.data)
+        ? recentJson.data
+        : [];
 
+      if (historyDocuments.length === 0) {
+        const fallbackRes = await fetch(`${API_URL}?limit=100`);
+        if (!fallbackRes.ok) throw new Error('Error al obtener historial guardado');
+
+        const fallbackJson = await fallbackRes.json();
+        historyDocuments = fallbackJson.success && Array.isArray(fallbackJson.data)
+          ? fallbackJson.data
+          : [];
+      }
+
+      if (historyDocuments.length > 0) {
+        const dbHistory = mapHistoryDocuments(historyDocuments);
         setHistory(dbHistory);
         setDbStatus({
           connected: true,
           lastSync: new Date(),
-          recordCount: json.data.length,
+          recordCount: historyDocuments.length,
           nextSync: new Date(Date.now() + DB_SYNC_INTERVAL * 1000)
         });
-        // console.log(` Historial cargado de MongoDB: ${dbHistory.length} registros`);
+      } else {
+        setHistory([]);
+        setDbStatus({
+          connected: true,
+          lastSync: new Date(),
+          recordCount: 0,
+          nextSync: new Date(Date.now() + DB_SYNC_INTERVAL * 1000)
+        });
       }
     } catch (err) {
       // console.warn('⚠️ No se pudo cargar historial de MongoDB:', err.message);

@@ -1,8 +1,8 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import { useSolarData } from './hooks/useSolarData';
-import StatCard from './components/StatCard';
-import ChartCard from './components/ChartCard';
-import { Sun, Battery, BatteryCharging, Zap, Activity, WifiOff, Wifi, Cpu, Database, RefreshCw } from 'lucide-react';
+import SectionNavbar from './components/SectionNavbar';
+import { Activity, WifiOff, Wifi, Cpu, Database, RefreshCw } from 'lucide-react';
 import './index.css';
 
 function App() {
@@ -63,203 +63,105 @@ function App() {
 
   return (
     <div className="dashboard-container">
-      <header className="header">
-        <div>
-          <h1>Dashboard Sistema Fotovoltaico IoT</h1>
-          <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>
-            Monitor en tiempo real ESP32 + INA219 via MQTT
+      <div className="app-ambient" aria-hidden="true"></div>
+      <header className="hero-panel">
+        <div className="hero-copy">
+          <div className="hero-kicker">Sistema fotovoltaico inteligente</div>
+          <h1>Control solar con lectura en vivo e histórico persistido</h1>
+          <p className="hero-subtitle">
+            Supervisión de panel, batería y carga con ESP32, MQTT y MongoDB en una sola vista.
           </p>
+
+          <div className="hero-meta">
+            <div className={`status-badge ${statusInfo.className}`}>
+              <div className={`status-dot ${error ? 'animate-pulse' : ''}`}></div>
+              {statusInfo.icon}
+              {statusInfo.text}
+            </div>
+
+            <div className="meta-pill">
+              <Database size={16} />
+              {dbStatus.connected ? `Mongo sincronizado · ${dbStatus.recordCount} registros` : 'Mongo no disponible'}
+            </div>
+
+            <div className="meta-pill">
+              <RefreshCw size={16} />
+              Próxima sync DB: {dbStatus.connected ? `${dbCountdown}s` : 'sin conexión'}
+            </div>
+          </div>
         </div>
-        
-        <div className={`status-badge ${statusInfo.className}`}>
-          <div className={`status-dot ${error ? 'animate-pulse' : ''}`}></div>
-          {statusInfo.icon}
-          {statusInfo.text}
+
+        <div className="hero-spotlight card">
+          <div className="hero-spotlight__top">
+            <span className="eyebrow">Resumen operativo</span>
+            <Cpu size={18} />
+          </div>
+
+          <div className="hero-spotlight__metric">
+            <span className="hero-spotlight__label">Potencia instantánea</span>
+            <strong>{Number(data.power).toFixed(2)} W</strong>
+          </div>
+
+          <div className="hero-spotlight__grid">
+            <div>
+              <span>Panel</span>
+              <strong>{Number(data.panel_voltage).toFixed(2)} V</strong>
+            </div>
+            <div>
+              <span>Batería</span>
+              <strong>{Number(data.battery_voltage).toFixed(2)} V</strong>
+            </div>
+            <div>
+              <span>MQTT</span>
+              <strong>{isConnected ? 'Online' : 'Offline'}</strong>
+            </div>
+            <div>
+              <span>Fuente</span>
+              <strong>{dataSource === 'mqtt' ? 'Tiempo real' : 'Histórico / espera'}</strong>
+            </div>
+          </div>
         </div>
       </header>
 
+      <div className="section-navbar-wrap">
+        <SectionNavbar />
+      </div>
+
       {error && (
-        <div style={{ 
-          backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-          border: '1px solid var(--danger)', 
-          color: 'var(--danger)', 
-          padding: '1rem', 
-          borderRadius: '0.5rem', 
-          marginBottom: '1.5rem', 
-          display: 'flex', 
-          gap: '0.5rem', 
-          alignItems: 'center' 
-        }}>
+        <div className="notice-banner notice-banner--danger">
           <Activity size={20} />
           {error}
         </div>
       )}
 
       {dataSource === 'disconnected' && !error && (
-        <div style={{ 
-          backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-          border: '1px solid var(--danger)', 
-          color: 'var(--danger)', 
-          padding: '1rem', 
-          borderRadius: '0.5rem', 
-          marginBottom: '1.5rem', 
-          display: 'flex', 
-          gap: '0.5rem', 
-          alignItems: 'center' 
-        }}>
+        <div className="notice-banner notice-banner--danger">
           <WifiOff size={20} />
           ESP32 desconectado. Esperando conexión del dispositivo...
         </div>
       )}
 
       {dataSource === 'mqtt_no_sensors' && (
-        <div style={{ 
-          backgroundColor: 'rgba(245, 158, 11, 0.1)', 
-          border: '1px solid var(--warning)', 
-          color: 'var(--warning)', 
-          padding: '1rem', 
-          borderRadius: '0.5rem', 
-          marginBottom: '1.5rem', 
-          display: 'flex', 
-          gap: '0.5rem', 
-          alignItems: 'center' 
-        }}>
+        <div className="notice-banner notice-banner--warning">
           <Wifi size={20} />
           ESP32 conectado y enviando datos, pero los sensores INA219 no están conectados. Los valores son 0.
         </div>
       )}
 
-      {/* 🚀 SECCIÓN 1: GENERACIÓN (PANEL SOLAR) */}
-      <div className="dashboard-section">
-        <h2 className="section-title">☀️ Generación (Panel Solar)</h2>
-        <div className="grid grid-cols-2">
-          <StatCard 
-            title="Voltaje Panel" 
-            value={data.panel_voltage} 
-            unit="V" 
-            icon={Sun} 
-            colorClass="warning" 
-          />
-          <StatCard 
-            title="Corriente Panel" 
-            value={data.panel_current} 
-            unit="A" 
-            icon={Activity} 
-            colorClass="primary" 
-          />
-        </div>
-        <div className="grid grid-cols-2 mobile-stack" style={{ marginTop: '1rem', gap: '1.5rem' }}>
-          <ChartCard 
-            title="Voltaje en Tiempo Real (MQTT)" 
-            data={liveData} 
-            dataKey="panel_voltage" 
-            colorHex="#f59e0b" 
-            gradientId="colorVoltageLive" 
-          />
-          <ChartCard 
-            title="Corriente en Tiempo Real (MQTT) [Amperios]" 
-            data={liveData} 
-            dataKey="panel_current" 
-            colorHex="#3b82f6" 
-            gradientId="colorCurrentLive" 
-          />
-        </div>
-      </div>
-
-      {/* 🔋 SECCIÓN 2: ALMACENAMIENTO (BATERÍA) */}
-      <div className="dashboard-section" style={{ marginTop: '2rem' }}>
-        <h2 className="section-title">🔋 Almacenamiento (Batería)</h2>
-        <div className="grid grid-cols-2 mobile-stack">
-          <StatCard 
-            title="Voltaje Batería" 
-            value={data.battery_voltage} 
-            unit="V" 
-            icon={isCharging ? BatteryCharging : Battery} 
-            colorClass={getBatteryColor(data.battery_voltage)} 
-          />
-          <div className="card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-            <div 
-              className="status-icon-container"
-              style={{ 
-                backgroundColor: isCharging ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                padding: '1rem', 
-                borderRadius: '50%'
-              }}
-            >
-              {isCharging ? 
-                <BatteryCharging size={24} color="var(--success)" /> : 
-                <Battery size={24} color="var(--warning)" />
-              }
-            </div>
-            <div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>Estado de Carga</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 600, color: isCharging ? 'var(--success)' : 'var(--warning)' }}>
-                {isCharging ? 'Cargando' : 'Descargando'}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                {Math.abs(data.battery_current).toFixed(3)} mA
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 💡 SECCIÓN 3: CONTROL Y SISTEMA (LEDS / MQTT) */}
-      <div className="dashboard-section" style={{ marginTop: '2rem' }}>
-        <h2 className="section-title">⚙️ Control y Sistema</h2>
-        <div className="grid grid-cols-3">
-          {/* Potencia */}
-          <StatCard 
-            title="Potencia Total" 
-            value={data.power} 
-            unit="mW" 
-            icon={Zap} 
-            colorClass={getPowerColor(data.power)} 
-          />
-
-          {/* Estado de Conexión (LED Visual) */}
-          <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Estado Conectividad</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ 
-                width: '12px', 
-                height: '12px', 
-                borderRadius: '50%', 
-                backgroundColor: isConnected ? 'var(--success)' : 'var(--danger)',
-                boxShadow: isConnected ? '0 0 10px var(--success)' : 'none'
-              }}></div>
-              <span style={{ fontWeight: 600 }}>{isConnected ? 'MQTT ONLINE' : 'OFFLINE'}</span>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-              ESP32: {dataSource === 'mqtt' ? 'Activo' : 'Buscando...'}
-            </div>
-          </div>
-
-          {/* Base de Datos */}
-          <div className="card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Database size={24} color={dbStatus.connected ? 'var(--primary)' : 'var(--danger)'} />
-            <div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Carga Histórica</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {dbStatus.connected ? `Sincronizado (${dbStatus.recordCount})` : 'Sin DB'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 📜 SECCIÓN 4: HISTORIAL (BASE DE DATOS MONGO) */}
-      <div className="dashboard-section" style={{ marginTop: '2rem', marginBottom: '3rem' }}>
-        <h2 className="section-title">📜 Historial Consumido (MongoDB)</h2>
-        <div className="grid grid-cols-1">
-          <ChartCard 
-            title="Historial de Voltaje de Panel (Datos de Base de Datos)" 
-            data={history} 
-            dataKey="panel_voltage" 
-            colorHex="#3b82f6" 
-            gradientId="colorVoltageDB" 
-          />
-        </div>
+      <div className="route-stage">
+        <Outlet
+          context={{
+            data,
+            history,
+            liveData,
+            isConnected,
+            dataSource,
+            dbStatus,
+            isCharging,
+            getBatteryColor,
+            getPowerColor,
+          }}
+        />
       </div>
     </div>
   );
