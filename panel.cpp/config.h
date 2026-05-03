@@ -9,8 +9,8 @@
 #define MQTT_USER "alvarolpz43"
 #define MQTT_PASSWORD "12345678Aj"
 
-#define MQTT_TOPIC_DATA "panel/data"
-#define MQTT_TOPIC_STATUS "panel/status"
+#define MQTT_TOPIC_DATA "solar/data"
+#define MQTT_TOPIC_STATUS "solar/status"
 
 #define MQTT_RECONNECT_DELAY 5000
 #define WIFI_CONFIG_TIMEOUT 20
