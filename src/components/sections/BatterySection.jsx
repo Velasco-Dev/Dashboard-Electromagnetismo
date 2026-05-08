@@ -1,8 +1,11 @@
 import React from 'react';
-import { Battery, BatteryCharging, Activity } from 'lucide-react';
+import { Battery, BatteryCharging, Activity, Zap } from 'lucide-react';
 import StatCard from '../StatCard';
+import ChartCard from '../ChartCard';
 
-function BatterySection({ data, isCharging, getBatteryColor }) {
+function BatterySection({ data, history, liveData, isCharging, getBatteryColor }) {
+  const chartData = history.length > 0 ? history : liveData;
+
   return (
     <section id="bateria" className="dashboard-section dashboard-section--spaced dashboard-section--anchored">
       <div className="section-heading">
@@ -43,6 +46,30 @@ function BatterySection({ data, isCharging, getBatteryColor }) {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-3 chart-grid">
+        <ChartCard
+          title="Voltaje Batería vs Tiempo (V)"
+          data={chartData}
+          dataKey="battery_voltage"
+          colorHex="var(--chart-violet)"
+          gradientId="batteryVoltageGrad"
+        />
+        <ChartCard
+          title="Corriente Batería vs Tiempo (mA)"
+          data={chartData}
+          dataKey="battery_current"
+          colorHex="var(--chart-cyan)"
+          gradientId="batteryCurrentGrad"
+        />
+        <ChartCard
+          title="Potencia Batería vs Tiempo (W)"
+          data={chartData}
+          dataKey="battery_power"
+          colorHex="var(--chart-pink)"
+          gradientId="batteryPowerGrad"
+        />
       </div>
     </section>
   );

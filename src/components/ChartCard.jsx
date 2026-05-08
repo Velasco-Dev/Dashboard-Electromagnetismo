@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const ChartCard = ({ title, data, dataKey, colorHex, gradientId }) => {
   return (
-    <div className="card chart-card" style={{ gridColumn: '1 / -1' }}>
+    <div className="card chart-card">
       <div className="card-header chart-card__header">{title}</div>
       <div className="chart-container">
         {data.length === 0 && (

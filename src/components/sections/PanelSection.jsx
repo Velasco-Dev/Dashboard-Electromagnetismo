@@ -4,6 +4,8 @@ import StatCard from '../StatCard';
 import ChartCard from '../ChartCard';
 
 function PanelSection({ data, liveData, history, getPowerColor }) {
+  const chartData = history.length > 0 ? history : liveData;
+
   return (
     <section id="panel" className="dashboard-section dashboard-section--anchored">
       <div className="section-heading">
@@ -27,38 +29,35 @@ function PanelSection({ data, liveData, history, getPowerColor }) {
           colorClass="primary"
         />
         <StatCard
-          title="Potencia Total"
-          value={data.power}
+          title="Potencia Panel"
+          value={data.panel_power ?? data.power}
           unit="W"
           icon={Zap}
-          colorClass={getPowerColor(data.power)}
+          colorClass={getPowerColor(data.panel_power ?? data.power)}
         />
       </div>
 
-      <div className="grid grid-cols-2 chart-grid">
+      <div className="grid grid-cols-3 chart-grid">
         <ChartCard
-          title="Voltaje en Tiempo Real (MQTT)"
-          data={liveData}
+          title="Voltaje Panel vs Tiempo (V)"
+          data={chartData}
           dataKey="panel_voltage"
           colorHex="var(--chart-violet)"
-          gradientId="colorVoltageLive"
+          gradientId="panelVoltageGrad"
         />
         <ChartCard
-          title="Corriente en Tiempo Real (MQTT) [Amperios]"
-          data={liveData}
+          title="Corriente Panel vs Tiempo (A)"
+          data={chartData}
           dataKey="panel_current"
           colorHex="var(--chart-cyan)"
-          gradientId="colorCurrentLive"
+          gradientId="panelCurrentGrad"
         />
-      </div>
-
-      <div className="grid grid-cols-1 chart-grid">
         <ChartCard
-          title="Historial de Voltaje de Panel (Datos de Base de Datos)"
-          data={history}
-          dataKey="panel_voltage"
+          title="Potencia Panel vs Tiempo (W)"
+          data={chartData}
+          dataKey="panel_power"
           colorHex="var(--chart-pink)"
-          gradientId="colorVoltageDB"
+          gradientId="panelPowerGrad"
         />
       </div>
     </section>

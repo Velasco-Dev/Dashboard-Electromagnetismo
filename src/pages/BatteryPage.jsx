@@ -3,11 +3,13 @@ import { useOutletContext } from 'react-router-dom';
 import BatterySection from '../components/sections/BatterySection';
 
 function BatteryPage() {
-  const { data, isCharging, getBatteryColor } = useOutletContext();
+  const { data, history, liveData, isCharging, getBatteryColor } = useOutletContext();
 
   return (
     <BatterySection
       data={data}
+      history={history}
+      liveData={liveData}
       isCharging={isCharging}
       getBatteryColor={getBatteryColor}
     />

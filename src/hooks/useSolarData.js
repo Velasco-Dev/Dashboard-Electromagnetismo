@@ -10,9 +10,13 @@ export const useSolarData = () => {
   const [data, setData] = useState({
     panel_voltage: 0,
     panel_current: 0,
+    panel_power: 0,
     battery_voltage: 0,
     battery_current: 0,
+    battery_power: 0,
+    load_voltage: 0,
     load_current: 0,
+    load_power: 0,
     power: 0,
     sensors_status: {},
     measurement_id: 0,
@@ -41,13 +45,22 @@ export const useSolarData = () => {
           ? (doc.marca_tiempo < 1e12 ? doc.marca_tiempo * 1000 : doc.marca_tiempo)
           : new Date(doc.recibido_en).getTime();
 
+        const pv = doc.voltaje_panel || 0;
+        const pc = doc.corriente_panel || 0;
+        const bv = doc.voltaje_bateria || 0;
+        const bc = doc.corriente_bateria || 0;
+        const lc = doc.corriente_carga || 0;
         return {
           time: new Date(ts).toLocaleTimeString('es-ES', { hour12: false }),
-          panel_voltage: doc.voltaje_panel || 0,
-          panel_current: doc.corriente_panel || 0,
-          battery_voltage: doc.voltaje_bateria || 0,
-          battery_current: doc.corriente_bateria || 0,
-          load_current: doc.corriente_carga || 0,
+          panel_voltage: pv,
+          panel_current: pc,
+          panel_power: Math.round(pv * pc * 1000) / 1000,
+          battery_voltage: bv,
+          battery_current: bc,
+          battery_power: Math.round(bv * bc * 1000) / 1000,
+          load_voltage: bv,
+          load_current: lc,
+          load_power: Math.round(bv * lc * 1000) / 1000,
           power: doc.potencia || 0,
           timestamp: ts
         };
@@ -76,8 +89,14 @@ export const useSolarData = () => {
       power: Number(receivedData.power || receivedData.panelPower) || 0,
       sensors_status: receivedData.sensors_status || {},
       measurement_id: receivedData.timestamp || 0,
-      timestamp: Date.now() // Forzamos timestamp actual en Live para fluidez
+      timestamp: Date.now(), // Forzamos timestamp actual en Live para fluidez
     };
+
+    // Campos calculados
+    processedData.panel_power = Math.round(processedData.panel_voltage * processedData.panel_current * 1000) / 1000;
+    processedData.battery_power = Math.round(processedData.battery_voltage * processedData.battery_current * 1000) / 1000;
+    processedData.load_voltage = processedData.battery_voltage; // La carga se alimenta desde la batería
+    processedData.load_power = Math.round(processedData.load_voltage * processedData.load_current * 1000) / 1000;
 
     // Detectar si los sensores INA219 están conectados
     const sensores = receivedData.sensors_status || {};
