@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Battery, BatteryCharging, Activity, Zap } from 'lucide-react';
 import StatCard from '../StatCard';
 import ChartCard from '../ChartCard';
+import HistoricalChartModal from '../HistoricalChartModal';
 
 function BatterySection({ data, history, liveData, isCharging, getBatteryColor }) {
   const chartData = history.length > 0 ? history : liveData;
+  const [selectedHistoricalChart, setSelectedHistoricalChart] = useState(null);
 
   return (
     <section id="bateria" className="dashboard-section dashboard-section--spaced dashboard-section--anchored">
@@ -48,13 +50,20 @@ function BatterySection({ data, history, liveData, isCharging, getBatteryColor }
         </div>
       </div>
 
-      <div className="grid grid-cols-3 chart-grid">
+      <div className="grid chart-grid chart-grid--stacked">
         <ChartCard
           title="Voltaje Batería vs Tiempo (V)"
           data={chartData}
           dataKey="battery_voltage"
           colorHex="var(--chart-violet)"
           gradientId="batteryVoltageGrad"
+          actionLabel="Ver datos históricos"
+          onActionClick={() => setSelectedHistoricalChart({
+            title: 'Voltaje Batería vs Tiempo (V)',
+            dataKey: 'battery_voltage',
+            colorHex: 'var(--chart-violet)',
+            gradientId: 'batteryVoltageGradDetail'
+          })}
         />
         <ChartCard
           title="Corriente Batería vs Tiempo (mA)"
@@ -71,6 +80,16 @@ function BatterySection({ data, history, liveData, isCharging, getBatteryColor }
           gradientId="batteryPowerGrad"
         />
       </div>
+
+      <HistoricalChartModal
+        isOpen={Boolean(selectedHistoricalChart)}
+        onClose={() => setSelectedHistoricalChart(null)}
+        title={selectedHistoricalChart?.title || ''}
+        dataKey={selectedHistoricalChart?.dataKey || 'battery_voltage'}
+        colorHex={selectedHistoricalChart?.colorHex || 'var(--chart-violet)'}
+        gradientId={selectedHistoricalChart?.gradientId || 'batteryHistoricalDetailGrad'}
+        realtimeData={chartData}
+      />
     </section>
   );
 }

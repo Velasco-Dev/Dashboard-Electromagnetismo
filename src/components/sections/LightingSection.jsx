@@ -37,7 +37,7 @@ function LightingSection({ data, history, liveData, isConnected, dataSource, dbS
         />
       </div>
 
-      <div className="grid grid-cols-3 chart-grid">
+      <div className="grid chart-grid chart-grid--stacked">
         <ChartCard
           title="Voltaje Carga vs Tiempo (V)"
           data={chartData}

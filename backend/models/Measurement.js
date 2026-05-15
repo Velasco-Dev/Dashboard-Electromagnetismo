@@ -63,6 +63,22 @@ class Measurement {
       .toArray();
   }
 
+  static async findByTimeRange(fromDate, toDate, limit = 500) {
+    const db = getDB();
+    const collection = db.collection(COLLECTION);
+
+    return await collection
+      .find({
+        recibido_en: {
+          $gte: fromDate,
+          $lte: toDate
+        }
+      })
+      .sort({ recibido_en: -1 })
+      .limit(limit)
+      .toArray();
+  }
+
   static async getStats() {
     const db = getDB();
     const collection = db.collection(COLLECTION);

@@ -8,6 +8,9 @@ const MeasurementController = require('../controllers/measurementController');
 // GET /api/measurements/recent?minutes=60 - Obtener mediciones recientes
 router.get('/recent', MeasurementController.getRecent);
 
+// GET /api/measurements/range?from=...&to=... - Obtener mediciones por rango de tiempo
+router.get('/range', MeasurementController.getRange);
+
 // GET /api/measurements/stats - Obtener estadísticas
 router.get('/stats', MeasurementController.getStats);
 

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sun, Activity, Zap } from 'lucide-react';
 import StatCard from '../StatCard';
 import ChartCard from '../ChartCard';
+import HistoricalChartModal from '../HistoricalChartModal';
 
 function PanelSection({ data, liveData, history, getPowerColor }) {
   const chartData = history.length > 0 ? history : liveData;
+  const [selectedHistoricalChart, setSelectedHistoricalChart] = useState(null);
 
   return (
     <section id="panel" className="dashboard-section dashboard-section--anchored">
@@ -37,13 +39,20 @@ function PanelSection({ data, liveData, history, getPowerColor }) {
         />
       </div>
 
-      <div className="grid grid-cols-3 chart-grid">
+      <div className="grid chart-grid chart-grid--stacked">
         <ChartCard
           title="Voltaje Panel vs Tiempo (V)"
           data={chartData}
           dataKey="panel_voltage"
           colorHex="var(--chart-violet)"
           gradientId="panelVoltageGrad"
+          actionLabel="Ver datos históricos"
+          onActionClick={() => setSelectedHistoricalChart({
+            title: 'Voltaje Panel vs Tiempo (V)',
+            dataKey: 'panel_voltage',
+            colorHex: 'var(--chart-violet)',
+            gradientId: 'panelVoltageGradDetail'
+          })}
         />
         <ChartCard
           title="Corriente Panel vs Tiempo (A)"
@@ -51,6 +60,13 @@ function PanelSection({ data, liveData, history, getPowerColor }) {
           dataKey="panel_current"
           colorHex="var(--chart-cyan)"
           gradientId="panelCurrentGrad"
+          actionLabel="Ver datos históricos"
+          onActionClick={() => setSelectedHistoricalChart({
+            title: 'Corriente Panel vs Tiempo (A)',
+            dataKey: 'panel_current',
+            colorHex: 'var(--chart-cyan)',
+            gradientId: 'panelCurrentGradDetail'
+          })}
         />
         <ChartCard
           title="Potencia Panel vs Tiempo (W)"
@@ -60,6 +76,16 @@ function PanelSection({ data, liveData, history, getPowerColor }) {
           gradientId="panelPowerGrad"
         />
       </div>
+
+      <HistoricalChartModal
+        isOpen={Boolean(selectedHistoricalChart)}
+        onClose={() => setSelectedHistoricalChart(null)}
+        title={selectedHistoricalChart?.title || ''}
+        dataKey={selectedHistoricalChart?.dataKey || 'panel_voltage'}
+        colorHex={selectedHistoricalChart?.colorHex || 'var(--chart-violet)'}
+        gradientId={selectedHistoricalChart?.gradientId || 'panelHistoricalDetailGrad'}
+        realtimeData={chartData}
+      />
     </section>
   );
 }

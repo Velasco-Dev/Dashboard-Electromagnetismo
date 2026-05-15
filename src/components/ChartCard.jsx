@@ -1,7 +1,7 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ChartCard = ({ title, data, dataKey, colorHex, gradientId }) => {
+const ChartCard = ({ title, data, dataKey, colorHex, gradientId, actionLabel, onActionClick }) => {
   return (
     <div className="card chart-card">
       <div className="card-header chart-card__header">{title}</div>
@@ -29,6 +29,13 @@ const ChartCard = ({ title, data, dataKey, colorHex, gradientId }) => {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {actionLabel && typeof onActionClick === 'function' && (
+        <div className="chart-card__actions">
+          <button className="chart-card__action-btn" onClick={onActionClick}>
+            {actionLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
