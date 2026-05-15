@@ -95,15 +95,34 @@ class MQTTClient {
 
       const data = JSON.parse(messageStr);
 
+      const panelVoltage = Number(data.panel_voltage) || 0;
+      const panelCurrent = Number(data.panel_current) || 0;
+      const batteryVoltage = Number(data.battery_voltage) || 0;
+      const batteryCurrent = Number(data.battery_current) || 0;
+      const loadVoltage = Number(data.load_voltage) || 0;
+      const loadCurrent = Number(data.load_current) || 0;
+
+      const panelPower = Number(data.panel_power ?? (panelVoltage * panelCurrent)) || 0;
+      const batteryPower = Number(data.battery_power ?? (batteryVoltage * batteryCurrent)) || 0;
+      const computedLoadPower = loadVoltage > 0
+        ? loadVoltage * loadCurrent
+        : batteryVoltage * loadCurrent;
+      const loadPower = Number(data.load_power ?? computedLoadPower) || 0;
+
+      const totalPower = Number(data.power ?? data.panelPower ?? panelPower) || 0;
+
       // Mapear los nombres del ESP32 (camelCase) a los nombres en español del Backend
       const mappedData = {
-        voltaje_panel: data.panel_voltage || 0,
-        corriente_panel: data.panel_current || 0,
-        voltaje_bateria: data.battery_voltage || 0,
-        corriente_bateria: data.battery_current || 0,
-        voltaje_carga: data.load_voltage || 0,
-        corriente_carga: data.load_current || 0,
-        potencia: data.power || 0,
+        voltaje_panel: panelVoltage,
+        corriente_panel: panelCurrent,
+        voltaje_bateria: batteryVoltage,
+        corriente_bateria: batteryCurrent,
+        voltaje_carga: loadVoltage,
+        corriente_carga: loadCurrent,
+        potencia_panel: panelPower,
+        potencia_bateria: batteryPower,
+        potencia_carga: loadPower,
+        potencia: totalPower,
         marca_tiempo: data.timestamp || Math.floor(Date.now() / 1000)
       };
 
